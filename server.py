@@ -77,8 +77,11 @@ async def get(http: httpx.AsyncClient, path: str) -> object:
     r = await http.get(path)
     if r.status_code == 404:
         return None
-    if r.status_code in (401, 403):
+    if r.status_code == 401:
         raise RuntimeError("Token rejected by gateway (re-run pairing).")
+    if r.status_code == 403:
+        # Seen on directory paths like /system even with a valid token.
+        raise RuntimeError(f"403 Forbidden for {path}: not readable (directory paths are not; use a leaf resource).")
     r.raise_for_status()
     return compact(r.json())
 
