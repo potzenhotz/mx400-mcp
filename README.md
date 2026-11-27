@@ -42,6 +42,60 @@ Single file, no install step: [`uv`](https://docs.astral.sh/uv/) pulls the depen
 
 All endpoints are listed in the [OpenAPI spec](https://github.com/bosch-home-comfort/api-docs/blob/main/openapi/k-40-rf.yaml).
 
+## What you can learn from the history
+
+The gateway keeps its own history under `/recordings/...`, so you can analyse a whole heating season without a separate logger. Ask in plain language ("How did consumption develop over the year?") or call `read` directly with `sampleRate=P1M` (months), `P1D` (days) or `PT1H` (hours).
+
+| Question | Recording | Why it is useful |
+| --- | --- | --- |
+| How much electricity did the heat pump use? | `/recordings/heatSources/emon/total/compressor`, `.../total/eheater` | Monthly cost, and how often the electric backup heater kicked in |
+| How much heat did it deliver? | `/recordings/heatSources/emon/total/outputProduced` | Divided by electricity: monthly COP and seasonal performance factor (SPF / JAZ) |
+| How cold was it? | `/recordings/system/sensors/temperatures/outdoor_t1` | Puts consumption in context; heating limit temperature from a trend line |
+| Is the compressor cycling? | `/recordings/heatSources/emon/total/numberOfStarts` | Starts per day; frequent short cycles cost efficiency and wear |
+| How long does it run per start? | `/recordings/heatSources/emon/total/workingTime` | Runtime per start; long runs mean the unit modulates well |
+| Split by heating / hot water | `/recordings/heatSources/emon/ch/...`, `.../dhw/...` | Shows what hot water costs (only if the heat pump makes it) |
+| Compare with your own meter | heat pump meter minus `total/compressor` + `total/eheater` | Reveals other loads on the same meter, e.g. a separate hot-water heat pump |
+
+### Example: one year of an air-to-water heat pump
+
+Read from a real MX400 for Dec 2025 to Nov 2026 (Nov partial):
+
+| Month | Ø outdoor | Electricity | Heat | COP | Starts | Runtime per start |
+| --- | --- | --- | --- | --- | --- | --- |
+| Dec | 5.1 °C | 730 kWh | 2893 kWh | 3.96 | ~47 | |
+| Jan | 2.2 °C | 932 kWh | 3356 kWh | 3.60 | 16 | |
+| Feb | 5.5 °C | 608 kWh | 2427 kWh | 3.99 | 55 | |
+| Mar | 8.6 °C | 676 kWh | 2621 kWh | 3.88 | 78 | |
+| Apr | 11.3 °C | 371 kWh | 1810 kWh | 4.88 | 64 | |
+| May | 15.8 °C | 220 kWh | 1119 kWh | 5.09 | 68 | |
+| Jun | 21.1 °C | 32 kWh | 104 kWh | (3.3) | 42 | |
+| Jul | 20.9 °C | 21 kWh | 11 kWh | (0.5) | 5 | |
+| Aug | 21.1 °C | 19 kWh | 7 kWh | (0.4) | 7 | 0.5 h |
+| Sep | 17.5 °C | 36 kWh | 128 kWh | (3.6) | 34 | 1.2 h |
+| Oct | 12.1 °C | 224 kWh | 1179 kWh | 5.26 | 92 | 3.9 h |
+| Nov | 4.6 °C | 673 kWh | 2641 kWh | 3.92 | 23 | 26.9 h |
+| **Year** | | **4542 kWh** | **18296 kWh** | **4.03** | **531** | |
+
+What it tells you:
+- Seasonal performance factor about 4.0. Summer COPs in brackets mean little: almost no heat is made, so standby and pumps dominate.
+- At most 3 starts per day (October); in November the compressor ran 96 % of the time with 23 starts. Cycling is not a problem here.
+- The heat pump's own meter showed about 70 to 120 kWh per month more than the gateway, which is the share of a separate hot-water heat pump on the same meter (upper bound, standby included).
+
+### Reading recordings correctly
+
+- Energy and counters: `y` is the value for the period. Temperatures: `y` is a sum and `c` the number of samples, so the mean is `y / c`.
+- `c` also tells you whether a period is complete: for recent data it counts hours (a full 30-day month has `c = 720`). Older months are compacted to `c = 1`.
+- On the gateway above, counter recordings (`numberOfStarts`) stored the cumulative counter instead of deltas until a firmware update in July 2026, and `workingTime` recordings only start there. Sanity-check old counter history against `/heatSources/numberOfStarts`.
+
+### Monthly import into Excel (Claude Code skill)
+
+[`skills/mx400-monat`](skills/mx400-monat/SKILL.md) fetches the values above for one month and writes them into an Excel sheet via AppleScript (Excel on macOS; the sheet layout is the author's own, adapt it). Make it available in every project and tell it where the workbook lives:
+
+```bash
+ln -s "$PWD/skills/mx400-monat" ~/.claude/skills/mx400-monat
+# in ~/.claude/settings.json:  "env": { "MX400_XLSX": "/path/to/workbook.xlsx" }
+```
+
 ## Notes
 
 - **Read-only.** The gateway's local API currently grants read access only; this server cannot change any settings.
