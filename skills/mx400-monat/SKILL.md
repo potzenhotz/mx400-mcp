@@ -7,7 +7,7 @@ description: Holt die Monatswerte der Wärmepumpe (Buderus MX400) per mx400-MCP 
 
 Ziel: ein abgeschlossener Monat steht als vollständige Zeile im Reiter **WP Gateway**, alle Formeln, Summen und Diagramme umfassen ihn. Sprache: Deutsch.
 
-- Mappe: `/Users/lukasmussle/Library/CloudStorage/GoogleDrive-lukasmuessle@googlemail.com/My Drive/Alex_Lukas/AufDemSchnee/AufDemSchnee.xlsx`
+- Mappe: Pfad steht in der Umgebungsvariable `MX400_XLSX` (`echo "$MX400_XLSX"`; gesetzt im `env`-Block von `~/.claude/settings.json`). Ist sie leer, nach dem Pfad fragen. Läuft Excel ohne die Mappe, sie per `open POSIX file` öffnen.
 - Schreiben **nur per AppleScript ins laufende Excel** (`timeout 60 osascript ...`). openpyxl & Co. zerstören beim Speichern Diagramme und bedingte Formatierung der anderen Reiter.
 
 ## 1. Monat festlegen

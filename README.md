@@ -89,10 +89,11 @@ What it tells you:
 
 ### Monthly import into Excel (Claude Code skill)
 
-[`skills/mx400-monat`](skills/mx400-monat/SKILL.md) fetches the values above for one month and writes them into an Excel sheet via AppleScript (Excel on macOS, workbook path and sheet layout are the author's own; adapt them). Make it available in every project:
+[`skills/mx400-monat`](skills/mx400-monat/SKILL.md) fetches the values above for one month and writes them into an Excel sheet via AppleScript (Excel on macOS; the sheet layout is the author's own, adapt it). Make it available in every project and tell it where the workbook lives:
 
 ```bash
 ln -s "$PWD/skills/mx400-monat" ~/.claude/skills/mx400-monat
+# in ~/.claude/settings.json:  "env": { "MX400_XLSX": "/path/to/workbook.xlsx" }
 ```
 
 ## Notes
